@@ -105,15 +105,15 @@ async function findSolution(input: string): Promise<number> {
 	const lines = input.split('\n');
 	const grid = lines.map((line) => line.split(''));
 
-	let parts: number[] = [];
+	let gearRatios: number[] = [];
 	for (let row = 0; row < grid.length; row++) {
-		const rowParts = getGearRatiosForRow(grid, row);
-		if (rowParts.length > 0) {
-			parts = [...parts, ...rowParts];
+		const ratios = getGearRatiosForRow(grid, row);
+		if (ratios.length > 0) {
+			gearRatios = [...gearRatios, ...ratios];
 		}
 	}
 
-	return parts.reduce((total, part) => total + part, 0);
+	return gearRatios.reduce((total, part) => total + part, 0);
 }
 
 /* ========================================================================== */
@@ -126,5 +126,3 @@ const result = await measure(() => findSolution(rawInput));
 
 console.log(`The sum of the IDs of the valid games is: ${result.answer}`);
 console.log(`Time taken: ${result.duration}ms`);
-
-// last answer: 550853 -> too low

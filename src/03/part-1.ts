@@ -101,5 +101,3 @@ const result = await measure(() => findSolution(rawInput));
 
 console.log(`The sum of the IDs of the valid games is: ${result.answer}`);
 console.log(`Time taken: ${result.duration}ms`);
-
-// last answer: 550853 -> too low
