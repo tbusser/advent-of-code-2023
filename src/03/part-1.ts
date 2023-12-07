@@ -58,7 +58,6 @@ function getPartsFromRow(grid: string[][], row: number): number[] {
 			}
 			// Reset the potential number.
 			potentialPartNumber = '';
-
 		} else {
 			// The cell is a number, add it to the part number we're processing.
 			potentialPartNumber += cell;
