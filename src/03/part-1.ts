@@ -99,5 +99,5 @@ const result = await measure(() => findSolution(rawInput));
 
 /* -------------------------------------------------------------------------- */
 
-console.log(`The sum of the IDs of the valid games is: ${result.answer}`);
+console.log(`The sum of part numbers is: ${result.answer}`);
 console.log(`Time taken: ${result.duration}ms`);
