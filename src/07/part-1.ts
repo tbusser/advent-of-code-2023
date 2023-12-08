@@ -25,10 +25,10 @@ async function findSolution(input: string): Promise<number> {
 	const hands = lines.map(getHands);
 
 	const processedHands = hands.map(hand => processHand(hand.cards, hand.bet));
-	// console.log('processedHands BEFORE:', [...processedHands]);
 	sortHands(processedHands);
-	console.log('processedHands AFTER:', processedHands);
-	const winningsPerHand = processedHands.map((hand, index) => hand.betValue * (index + 1));
+	const winningsPerHand = processedHands.map(
+		(hand, index) => hand.betValue * (index + 1)
+	);
 
 	return winningsPerHand.reduce((total, winnings) => total + winnings, 0);
 }
