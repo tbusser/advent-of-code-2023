@@ -3,7 +3,7 @@ import {
 	areSeedAndTranslationOverlapping,
 	createSeed,
 	createTranslation
-} from './seed-range';
+} from './seed-range.ts';
 
 /* ========================================================================== */
 
