@@ -26,22 +26,13 @@ function createSeeds(line: string): Seed[] {
 function translateSeeds(seeds: Seed[], line: string) {
 	seeds.forEach(seed => (seed.moved = false));
 
-	const [key, ...translations] = line.split('\n');
-	const [sourceKey, _, destinationKey] = key.split(/[- ]/g);
-	// console.log(`${sourceKey} -> ${destinationKey}`);
+	const [_, ...translations] = line.split('\n');
 	for (const translation of translations) {
 		const [destination, source, length] = translation.split(' ').map(Number);
 		const upperBound = source + length;
 
-		// console.log(`${source} -> ${upperBound} (${length})`);
-
 		for (const seed of seeds) {
 			if (seed.location >= source && seed.location < upperBound && !seed.moved) {
-				// console.log(
-				// 	`Moving ${seed.seed} from ${seed.location} to ${
-				// 		destination + (seed.location - source)
-				// 	}`
-				// );
 				seed.location = destination + (seed.location - source);
 				seed.moved = true;
 			}
@@ -62,7 +53,6 @@ async function findSolution(input: string): Promise<number> {
 
 	for (let index = 1; index < lines.length; index++) {
 		translateSeeds(seeds, lines[index]);
-		// console.log(seeds);
 	}
 
 	return findLowestLocation(seeds);
