@@ -34,13 +34,13 @@ function findMinimumWaitTime(game: Game): number {
 
 function processInput(input: string): Game[] {
 	const [timesInput, distancesInput] = input.split('\n');
-	const valuesRegex = /\s+([\d\s]+)/
+	const valuesRegex = /\s+([\d\s]+)/;
 	const times = valuesRegex.exec(timesInput)[1].split(/\s+/).map(Number);
 	const distances = valuesRegex.exec(distancesInput)[1].split(/\s+/).map(Number);
 
 	return times.map((time, index) => ({
 		distance: distances[index],
-		time,
+		time
 	}));
 }
 
