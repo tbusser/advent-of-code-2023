@@ -67,15 +67,21 @@ function convertSeedRange(seed: SeedRange, translation: MapLine) {
 /**
  * Takes a seed range and splits it into two ranges at the given
  * cutoff position.
+ *
+ * @param keep Determines which part of the seed range to keep in the original
+ *        seed range and which part to move to the new seed range.
+ *        - before: Everything up to the cutoff position is kept in the original
+ *            seed range and everything after the cutoff position is placed in a
+ *            new seed range.
+ *        - after: Everything after the cutoff position is kept in the original
+ *            seed range and everything before the cutoff position is placed in
+ *            a new seed range.
  */
 function splitSeedRange(
 	seedRange: SeedRange,
 	cutoffPosition: number,
 	keep: 'before' | 'after'
 ): SeedRange {
-	// When keep is 'before' everything up to the cutoff position is kept in the
-	// original seed range and everything after the cutoff position is placed in
-	// a new seed range.
 	if (keep === 'before') {
 		const newSeed: SeedRange = {
 			start: cutoffPosition,
@@ -127,9 +133,9 @@ export function convertSeedRangeOverlappingWithMapLine(
 	// the end of the seed range.
 	if (overlapStart > seedRange.start && overlapEnd === seedRange.end) {
 		// The seed positions to move start somewhere inside the range and end
-		// with the last seed position in the range. This part of the original
-		// range is moved into a new range and the positions for this new range
-		// will be converted to the destination positions.
+		// with the last seed position in the range. This second part of the
+		// original range is moved into a new range and the positions for this
+		// new range will be converted to the destination positions.
 		const newRange = convertSeedRange(
 			splitSeedRange(seedRange, overlapStart, 'before'),
 			mapLine
@@ -144,6 +150,10 @@ export function convertSeedRangeOverlappingWithMapLine(
 	// Check if the conversion range starts before the seed range and ends
 	// inside the seed range
 	if (overlapStart === seedRange.start && overlapEnd < seedRange.end) {
+		// The seed positions to move starts at the beginning of the range and
+		// end somewhere inside the range. This first part of the original
+		// range is moved into a new range and the positions for this new range
+		// will be converted to the destination positions.
 		const newSeed = convertSeedRange(
 			splitSeedRange(seedRange, overlapEnd, 'after'),
 			mapLine
@@ -157,13 +167,25 @@ export function convertSeedRangeOverlappingWithMapLine(
 
 	// We've check all other cases, now there is only one case left. The
 	// conversion range starts and ends inside the seed range.
-	const beforeSeed = splitSeedRange(seedRange, overlapStart - 1, 'after');
-	const afterSeed = splitSeedRange(seedRange, overlapEnd + 1, 'before');
+
+	// All the positions up the start of the conversion range are moved into a
+	// a new range. This new range is unaffected by the conversion range and
+	// will not be converted to the destination positions.
+	const beforeSeedRange = splitSeedRange(seedRange, overlapStart - 1, 'after');
+
+	// All the positions after the end of the conversion range are moved into a
+	// a new range. This new range is unaffected by the conversion range and
+	// will not be converted to the destination positions.
+	const afterSeedRange = splitSeedRange(seedRange, overlapEnd + 1, 'before');
+
+	// The original seed range has now been reduced to match the positions
+	// covered by the map line. The positions in this range will be converted
+	// to the destination positions.
 	convertSeedRange(seedRange, mapLine);
 
 	return {
 		seed: seedRange,
-		splitRanges: [beforeSeed, afterSeed]
+		splitRanges: [beforeSeedRange, afterSeedRange]
 	};
 }
 
