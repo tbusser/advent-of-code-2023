@@ -10,7 +10,7 @@ function calculateTotal(values: number[]): number {
 function findNextValue(history: string): number {
 	// Convert the history to an array of values.
 	let current: number[] = history.split(' ').map(Number);
-	// Keep track of the last value for each iteration, start with the last
+	// Keep track of the first value for each iteration, start with the first
 	// value of the input.
 	const firstValues = [current[0]];
 
@@ -27,7 +27,7 @@ function findNextValue(history: string): number {
 			// Push the difference between the value to the current array.
 			current.push(input[index + 1] - input[index]);
 		}
-		// Keep the last value in the array, this will be needed to predict the
+		// Keep the first value in the array, this will be needed to predict the
 		// next value in the sequence.
 		firstValues.push(current[0]);
 	} while (current.some(value => value !== 0) && current.length > 1);
@@ -46,8 +46,6 @@ async function findSolution(input: string): Promise<number> {
 
 	// Calculate the predicted next value for each history line.
 	const predictions = histories.map(findNextValue);
-
-	console.log(predictions);
 
 	// Return the sum of all the predicted values.
 	return calculateTotal(predictions);
