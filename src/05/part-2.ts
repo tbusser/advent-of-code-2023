@@ -2,10 +2,10 @@ import { fetchInputForDay } from '../utils/fetch-input.js';
 import { measure } from '../utils/performance.js';
 
 import {
-	applyTranslationToSeed,
-	areSeedAndTranslationOverlapping,
-	createSeed,
-	createTranslation,
+	convertSeedRangeOverlappingWithMapLine,
+	areSeedAndMapLineRangesOverlapping,
+	createSeedRange,
+	createMapLine,
 	SeedRange
 } from './seed-range.js';
 
@@ -17,7 +17,7 @@ function createSeeds(line: string): SeedRange[] {
 	return rangePairs.map(range => {
 		const [start, length] = range.split(' ').map(Number);
 
-		return createSeed(start, length);
+		return createSeedRange(start, length);
 	});
 }
 
@@ -32,19 +32,24 @@ function resetMovedFlag(seeds: SeedRange[]) {
 	seeds.forEach(seed => (seed.moved = false));
 }
 
-function translateSeeds(seeds: SeedRange[], line: string) {
+function processConversionMap(seeds: SeedRange[], line: string) {
+	// Reset the moved flag for all seeds at the start of a new map..
 	resetMovedFlag(seeds);
 
-	const [_, ...translationLines] = line.split('\n');
-	for (const translationLine of translationLines) {
-		const translation = createTranslation(translationLine);
+	const [mapTitle, ...mapLines] = line.split('\n');
+	for (const mapLineSource of mapLines) {
+		const mapLine = createMapLine(mapLineSource);
+
 		for (const seed of seeds) {
+			// Seeds which have already been moved while processing the current
+			// conversion map cannot be moved again.
 			if (seed.moved) {
 				continue;
 			}
 
-			if (areSeedAndTranslationOverlapping(seed, translation)) {
-				const result = applyTranslationToSeed(seed, translation);
+			// Check if the seed range is affected by the current map line.
+			if (areSeedAndMapLineRangesOverlapping(seed, mapLine)) {
+				const result = convertSeedRangeOverlappingWithMapLine(seed, mapLine);
 				seeds.push(...result.splitRanges);
 			}
 		}
@@ -52,12 +57,12 @@ function translateSeeds(seeds: SeedRange[], line: string) {
 }
 
 async function findSolution(input: string): Promise<number> {
-	const lines = input.split('\n\n');
-	const seeds = createSeeds(lines[0]);
+	const [seedsLine, ...conversionMaps] = input.split('\n\n');
+	const seeds = createSeeds(seedsLine);
 
-	for (let index = 1; index < lines.length; index++) {
-		translateSeeds(seeds, lines[index]);
-	}
+	conversionMaps.forEach(conversionMap =>
+		processConversionMap(seeds, conversionMap)
+	);
 
 	return findLowestLocation(seeds);
 }
