@@ -1,11 +1,11 @@
 enum PipeType {
-	Vertical = '|',
 	Horizontal = '-',
 	NorthEast = 'L',
 	NorthWest = 'J',
-	SouthWest = '7',
 	SouthEast = 'F',
-	Start = 'S'
+	SouthWest = '7',
+	Start = 'S',
+	Vertical = '|'
 }
 
 type Direction = 'up' | 'down' | 'left' | 'right';
@@ -62,6 +62,16 @@ const validLeftDestination = [
 	PipeType.SouthEast
 ];
 
+const validationMapping: Record<
+	Direction,
+	{ sources: PipeType[]; destinations: PipeType[] }
+> = {
+	up: { sources: validUpStart, destinations: validUpDestination },
+	right: { sources: validRightStart, destinations: validRightDestination },
+	down: { sources: validDownStart, destinations: validDownDestination },
+	left: { sources: validLeftStart, destinations: validLeftDestination }
+};
+
 /* ========================================================================== */
 
 class Grid {
@@ -81,53 +91,48 @@ class Grid {
 
 	/* ---------------------------------------------------------------------- */
 
-	public isValidPath(position: number, direction: Direction): boolean {
-		const source = this.cells[position] as PipeType;
-		const destination = this.cells[
-			this.getNeighborIndex(position, direction)
-		] as PipeType;
-
-		if (direction === 'up') {
-			return (
-				validUpStart.includes(source) && validUpDestination.includes(destination)
-			);
-		}
-		if (direction === 'right') {
-			return (
-				validRightStart.includes(source) &&
-				validRightDestination.includes(destination)
-			);
-		}
-		if (direction === 'down') {
-			return (
-				validDownStart.includes(source) &&
-				validDownDestination.includes(destination)
-			);
-		}
-
-		// Only the left direction is left.
-		return (
-			validLeftStart.includes(source) && validLeftDestination.includes(destination)
-		);
+	private init() {
+		// Apply padding to the grid, this will make it easier to flood fill
+		// most of the cells outside of the main loop.
+		this.padGrid();
+		this._start = this.cells.indexOf('S');
 	}
 
-	public canGoDown(index: number): boolean {
-		return this.isValidPath(index, 'down');
+	/* ---------------------------------------------------------------------- */
+
+	/**
+	 * Returns the indexes of neighbors that can be traveled to from the
+	 * provided index.
+	 */
+	private findNeighbors(index: number): number[] {
+		const result = [];
+
+		['up', 'right', 'down', 'left'].forEach((direction: Direction) => {
+			if (this.isValidPath(index, direction)) {
+				result.push(this.getIndexForNeighbor(index, direction));
+			}
+		});
+
+		return result;
 	}
 
-	public canGoLeft(index: number): boolean {
-		return this.isValidPath(index, 'left');
+	/**
+	 * Returns the indexes of empty neighbors that can be traveled to from the
+	 * provided index.
+	 */
+	private findEmptyNeighbors(index: number): number[] {
+		const result = [];
+		['up', 'right', 'down', 'left'].forEach((direction: Direction) => {
+			const position = this.getIndexForNeighbor(index, direction);
+			if (this.cells[position] === '.') {
+				result.push(position);
+			}
+		});
+
+		return result;
 	}
 
-	public canGoRight(index: number): boolean {
-		return this.isValidPath(index, 'right');
-	}
-
-	public canGoUp(index: number): boolean {
-		return this.isValidPath(index, 'up');
-	}
-
-	private getNeighborIndex(index: number, direction: Direction): number {
+	private getIndexForNeighbor(index: number, direction: Direction): number {
 		switch (direction) {
 			case 'up':
 				return index - this.rowLength;
@@ -140,27 +145,42 @@ class Grid {
 		}
 	}
 
-	public findNeighbors(index: number): number[] {
-		const result = [];
-
-		if (this.canGoUp(index)) {
-			result.push(this.getNeighborIndex(index, 'up'));
-		}
-		if (this.canGoRight(index)) {
-			result.push(this.getNeighborIndex(index, 'right'));
-		}
-		if (this.canGoDown(index)) {
-			result.push(this.getNeighborIndex(index, 'down'));
-		}
-		if (this.canGoLeft(index)) {
-			result.push(this.getNeighborIndex(index, 'left'));
-		}
-
-		return result;
+	private getPipeAtIndex(index: number): PipeType {
+		return this.cells[index] as PipeType;
 	}
 
-	private init() {
-		this._start = this.cells.indexOf('S');
+	/**
+	 * Returns an array of strings, each string represents a row in the grid.
+	 */
+	private getRows(grid: string = this.cells): string[] {
+		const rows = [];
+		for (let i = 0; i < grid.length; i += this.rowLength) {
+			rows.push(grid.slice(i, i + this.rowLength));
+		}
+
+		return rows;
+	}
+
+	private isValidPath(index: number, direction: Direction): boolean {
+		const sourcePipe = this.getPipeAtIndex(index);
+		const destinationPipe = this.getPipeAtIndex(
+			this.getIndexForNeighbor(index, direction)
+		);
+		const { destinations, sources } = validationMapping[direction];
+
+		return sources.includes(sourcePipe) && destinations.includes(destinationPipe);
+	}
+
+	private padGrid() {
+		// Get all the rows and add a cell at the start and end of each row.
+		const rows = this.getRows().map(row => `.${row}.`);
+		// The length of the rows has increased by 2, this needs to be set.
+		this.rowLength += 2;
+		// Add a row at the top and bottom of the grid.
+		rows.unshift('.'.repeat(this.rowLength));
+		rows.push('.'.repeat(this.rowLength));
+		// Join all the rows back together.
+		this.cells = rows.join('');
 	}
 
 	/* ---------------------------------------------------------------------- */
@@ -183,8 +203,12 @@ class Grid {
 			// visited tile. Without this check, the first neighbor would
 			// already report a solution.
 			if (position === this.startIndex && previousPosition !== this.startIndex) {
+				// The last item in the path is the start position, this needs
+				// to be removed or it will be double in the result.
 				path.pop();
 
+				// Lower the number of steps by 1, the last step is to the start
+				// position which is already counted in the loop.
 				return { steps: steps - 1, path };
 			}
 
@@ -204,10 +228,15 @@ class Grid {
 			});
 		}
 
+		// No solution was found.
 		return { steps: -1, path: [] };
 	}
 
-	public indexToPosition(index: number): { x: number; y: number } {
+	/**
+	 * Converts an index to a X,Y coordinate. The index 0 corresponds to the
+	 * coordinate { x: 0, y: 0 }.
+	 */
+	public indexToCoordinate(index: number): { x: number; y: number } {
 		const row = Math.floor(index / this.rowLength);
 		const column = index % this.rowLength;
 
@@ -217,21 +246,20 @@ class Grid {
 		};
 	}
 
+	/**
+	 * Outputs the current state of the grid to the console.
+	 */
 	public log() {
-		let output = this.cells;
-		output = output
-			.replaceAll('7', '┐')
-			.replaceAll('-', '─')
-			.replaceAll('J', '┘')
-			.replaceAll('F', '┌')
-			.replaceAll('L', '└')
-			.replaceAll('|', '│');
+		// Replace the lines with their ASCII art counterparts.
+		const output = this.cells
+			.replaceAll(PipeType.Horizontal, '─')
+			.replaceAll(PipeType.NorthEast, '└')
+			.replaceAll(PipeType.NorthWest, '┘')
+			.replaceAll(PipeType.SouthEast, '┌')
+			.replaceAll(PipeType.SouthWest, '┐')
+			.replaceAll(PipeType.Vertical, '│');
 
-		const rows = [];
-		for (let i = 0; i < output.length; i += this.rowLength) {
-			rows.push(output.slice(i, i + this.rowLength));
-		}
-		console.table(rows);
+		console.table(this.getRows(output));
 	}
 }
 
