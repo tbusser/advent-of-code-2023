@@ -212,7 +212,7 @@ class Grid {
 	 * This method is based on this StackOverflow answer:
 	 * https://stackoverflow.com/a/29915728/1244780
 	 *
-	 * It has been adapted to with the Grid class.
+	 * It has been adapted to work with the Grid class.
 	 */
 	private isIndexInsideMainLoop(index: number, vertexes: Coordinate[]): boolean {
 		// ray-casting algorithm based on
