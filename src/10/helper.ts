@@ -1,70 +1,73 @@
-enum PipeType {
+enum CellType {
+	Ground = '.',
 	Horizontal = '-',
 	NorthEast = 'L',
 	NorthWest = 'J',
+	Outside = 'O',
 	SouthEast = 'F',
 	SouthWest = '7',
 	Start = 'S',
 	Vertical = '|'
 }
 
+type Coordinate = { x: number; y: number };
 type Direction = 'up' | 'down' | 'left' | 'right';
 
 /* ========================================================================== */
 
 const validUpStart = [
-	PipeType.Start,
-	PipeType.Vertical,
-	PipeType.NorthEast,
-	PipeType.NorthWest
+	CellType.Start,
+	CellType.Vertical,
+	CellType.NorthEast,
+	CellType.NorthWest
 ];
 const validRightStart = [
-	PipeType.Start,
-	PipeType.Horizontal,
-	PipeType.NorthEast,
-	PipeType.SouthEast
+	CellType.Start,
+	CellType.Horizontal,
+	CellType.NorthEast,
+	CellType.SouthEast
 ];
 const validDownStart = [
-	PipeType.Start,
-	PipeType.Vertical,
-	PipeType.SouthEast,
-	PipeType.SouthWest
+	CellType.Start,
+	CellType.Vertical,
+	CellType.SouthEast,
+	CellType.SouthWest
 ];
 const validLeftStart = [
-	PipeType.Start,
-	PipeType.Horizontal,
-	PipeType.SouthWest,
-	PipeType.NorthWest
+	CellType.Start,
+	CellType.Horizontal,
+	CellType.SouthWest,
+	CellType.NorthWest
 ];
 
 const validUpDestination = [
-	PipeType.Start,
-	PipeType.Vertical,
-	PipeType.SouthEast,
-	PipeType.SouthWest
+	CellType.Start,
+	CellType.Vertical,
+	CellType.SouthEast,
+	CellType.SouthWest
 ];
 const validRightDestination = [
-	PipeType.Start,
-	PipeType.Horizontal,
-	PipeType.NorthWest,
-	PipeType.SouthWest
+	CellType.Start,
+	CellType.Horizontal,
+	CellType.NorthWest,
+	CellType.SouthWest
 ];
 const validDownDestination = [
-	PipeType.Start,
-	PipeType.Vertical,
-	PipeType.NorthEast,
-	PipeType.NorthWest
+	CellType.Start,
+	CellType.Vertical,
+	CellType.NorthEast,
+	CellType.NorthWest
 ];
 const validLeftDestination = [
-	PipeType.Start,
-	PipeType.Horizontal,
-	PipeType.NorthEast,
-	PipeType.SouthEast
+	CellType.Start,
+	CellType.Horizontal,
+	CellType.NorthEast,
+	CellType.SouthEast
 ];
 
 const validationMapping: Record<
 	Direction,
-	{ sources: PipeType[]; destinations: PipeType[] }
+	{ sources: CellType[]; destinations: CellType[] }
 > = {
 	up: { sources: validUpStart, destinations: validUpDestination },
 	right: { sources: validRightStart, destinations: validRightDestination },
@@ -100,6 +103,41 @@ class Grid {
 
 	/* ---------------------------------------------------------------------- */
 
+	private clearNonLoopFilledCells(path: number[]) {
+		this.cells = this.cells
+			.split('')
+			.map((cell, index) => {
+				return path.includes(index) ? cell : CellType.Ground;
+			})
+			.join('');
+	}
+
+	/**
+	 * Returns an array of index for the neighbors of the provided index that
+	 * are cells with ground as their content.
+	 */
+	private findGroundNeighbors(index: number): number[] {
+		const result = [];
+		['up', 'right', 'down', 'left'].forEach((direction: Direction) => {
+			const neighborIndex = this.getIndexForNeighbor(index, direction);
+			if (this.getCellTypeAtIndex(neighborIndex) === CellType.Ground) {
+				result.push(neighborIndex);
+			}
+		});
+
+		return result;
+	}
+
+	/**
+	 * Returns the index of all cells of the specified type.
+	 */
+	private findIndexesForCellType(cellType: CellType): number[] {
+		return this.cells
+			.split('')
+			.map((cell, index) => (cell === cellType ? index : undefined))
+			.filter(index => index !== undefined);
+	}
+
 	/**
 	 * Returns the indexes of neighbors that can be traveled to from the
 	 * provided index.
@@ -116,6 +154,31 @@ class Grid {
 		return result;
 	}
 
+	private floodFillGroundCells() {
+		// Because the grid has been padded we know for the cell at index 0
+		// is a ground cell. This can be used as the starting point for the
+		// flood fill algorithm.
+		const queue: number[] = [0];
+		const visited = new Set<number>();
+
+		while (queue.length > 0) {
+			const index = queue.pop();
+
+			this.replaceCellAtIndex(index, CellType.Outside);
+			visited.add(index);
+
+			const neighbors = this.findGroundNeighbors(index);
+			neighbors.forEach(neighbor => {
+				// If the neighbor has already been visited it can be skipped.
+				if (visited.has(neighbor)) {
+					return;
+				}
+
+				queue.push(neighbor);
+			});
+		}
+	}
+
 	private getIndexForNeighbor(index: number, direction: Direction): number {
 		switch (direction) {
 			case 'up':
@@ -129,8 +192,8 @@ class Grid {
 		}
 	}
 
-	private getPipeAtIndex(index: number): PipeType {
-		return this.cells[index] as PipeType;
+	private getCellTypeAtIndex(index: number): CellType {
+		return this.cells[index] as CellType;
 	}
 
 	/**
@@ -145,9 +208,36 @@ class Grid {
 		return rows;
 	}
 
+	/**
+	 * This method is based on this StackOverflow answer:
+	 * https://stackoverflow.com/a/29915728/1244780
+	 *
+	 * It has been adapted to with the Grid class.
+	 */
+	private isIndexInsideMainLoop(index: number, vertexes: Coordinate[]): boolean {
+		// ray-casting algorithm based on
+		// https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html
+
+		const { x, y } = this.indexToCoordinate(index);
+
+		let inside = false;
+		for (let i = 0, j = vertexes.length - 1; i < vertexes.length; j = i++) {
+			const { x: xi, y: yi } = vertexes[i];
+			const { x: xj, y: yj } = vertexes[j];
+
+			const intersect =
+				yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+			if (intersect) {
+				inside = !inside;
+			}
+		}
+
+		return inside;
+	}
+
 	private isValidPath(index: number, direction: Direction): boolean {
-		const sourcePipe = this.getPipeAtIndex(index);
-		const destinationPipe = this.getPipeAtIndex(
+		const sourcePipe = this.getCellTypeAtIndex(index);
+		const destinationPipe = this.getCellTypeAtIndex(
 			this.getIndexForNeighbor(index, direction)
 		);
 		const { destinations, sources } = validationMapping[direction];
@@ -165,6 +255,31 @@ class Grid {
 		rows.push('.'.repeat(this.rowLength));
 		// Join all the rows back together.
 		this.cells = rows.join('');
+	}
+
+	private replaceCellAtIndex(index: number, cellType: CellType) {
+		this.cells =
+			this.cells.slice(0, index) + cellType + this.cells.slice(index + 1);
+	}
+
+	/**
+	 * Iterates over all cells that are ground cells and checks if they are
+	 * inside the main loop. If they are not, the cell is changed to an outside
+	 * cell type.
+	 */
+	private processGroundCells(mainLoop: number[]) {
+		// Convert the main loop indexes to coordinates.
+		const vertexes: Coordinate[] = mainLoop.map(index =>
+			this.indexToCoordinate(index)
+		);
+
+		const groundIndexes = this.findIndexesForCellType(CellType.Ground);
+		groundIndexes.forEach(index => {
+			const isInLoop = this.isIndexInsideMainLoop(index, vertexes);
+			if (!isInLoop) {
+				this.replaceCellAtIndex(index, CellType.Outside);
+			}
+		});
 	}
 
 	/* ---------------------------------------------------------------------- */
@@ -217,10 +332,25 @@ class Grid {
 	}
 
 	/**
+	 * Should be run after running markOutsideCells. Returns the number of cells
+	 * which are still ground cells. These are the cells inside the main loop.
+	 */
+	public getNumberOfCellsInMainLoop(): number {
+		let count = 0;
+		for (const cell of this.cells) {
+			if (cell === CellType.Ground) {
+				count++;
+			}
+		}
+
+		return count;
+	}
+
+	/**
 	 * Converts an index to a X,Y coordinate. The index 0 corresponds to the
 	 * coordinate { x: 0, y: 0 }.
 	 */
-	public indexToCoordinate(index: number): { x: number; y: number } {
+	public indexToCoordinate(index: number): Coordinate {
 		const row = Math.floor(index / this.rowLength);
 		const column = index % this.rowLength;
 
@@ -236,14 +366,20 @@ class Grid {
 	public log() {
 		// Replace the lines with their ASCII art counterparts.
 		const output = this.cells
-			.replaceAll(PipeType.Horizontal, '─')
-			.replaceAll(PipeType.NorthEast, '└')
-			.replaceAll(PipeType.NorthWest, '┘')
-			.replaceAll(PipeType.SouthEast, '┌')
-			.replaceAll(PipeType.SouthWest, '┐')
-			.replaceAll(PipeType.Vertical, '│');
+			.replaceAll(CellType.Horizontal, '─')
+			.replaceAll(CellType.NorthEast, '└')
+			.replaceAll(CellType.NorthWest, '┘')
+			.replaceAll(CellType.SouthEast, '┌')
+			.replaceAll(CellType.SouthWest, '┐')
+			.replaceAll(CellType.Vertical, '│');
 
 		console.table(this.getRows(output));
+	}
+
+	public markOutsideCells(mainLoop: number[]) {
+		this.clearNonLoopFilledCells(mainLoop);
+		this.floodFillGroundCells();
+		this.processGroundCells(mainLoop);
 	}
 }
 
