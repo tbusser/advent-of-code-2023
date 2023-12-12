@@ -116,22 +116,6 @@ class Grid {
 		return result;
 	}
 
-	/**
-	 * Returns the indexes of empty neighbors that can be traveled to from the
-	 * provided index.
-	 */
-	private findEmptyNeighbors(index: number): number[] {
-		const result = [];
-		['up', 'right', 'down', 'left'].forEach((direction: Direction) => {
-			const position = this.getIndexForNeighbor(index, direction);
-			if (this.cells[position] === '.') {
-				result.push(position);
-			}
-		});
-
-		return result;
-	}
-
 	private getIndexForNeighbor(index: number, direction: Direction): number {
 		switch (direction) {
 			case 'up':
