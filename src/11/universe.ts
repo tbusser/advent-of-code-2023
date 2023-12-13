@@ -37,13 +37,9 @@ export class Universe {
 		const source = this.indexToCoordinate(sourceIndex);
 		const destination = this.indexToCoordinate(destinationIndex);
 
-		if (source.x === destination.x) {
-			return Math.abs(source.y - destination.y);
-		} else if (source.y === destination.y) {
-			return Math.abs(source.x - destination.x);
-		} else {
-			return this.findShortestPath(sourceIndex, destinationIndex);
-		}
+		return (
+			Math.abs(source.y - destination.y) + Math.abs(source.x - destination.x)
+		);
 	}
 
 	private expandUniverseHorizontally() {
@@ -107,72 +103,6 @@ export class Universe {
 		}
 
 		return emptyColumns;
-	}
-
-	private findShortestPath(
-		sourceIndex: number,
-		destinationIndex: number
-	): number {
-		const destinationCoordinate = this.indexToCoordinate(destinationIndex);
-		const queue = [
-			{
-				index: sourceIndex,
-				distance: 0
-			}
-		];
-		const visited = new Set<number>();
-
-		while (queue.length > 0) {
-			const { index, distance } = queue.pop();
-			visited.add(index);
-
-			if (index === destinationIndex) {
-				return distance;
-			}
-
-			const neighbors = this.getNeighbors(index, destinationCoordinate);
-			neighbors.forEach(neighbor => {
-				if (visited.has(neighbor)) {
-					return;
-				}
-
-				queue.push({
-					index: neighbor,
-					distance: distance + 1
-				});
-			});
-		}
-	}
-
-	private getNeighbors(
-		sourceIndex: number,
-		destinationCoordinate: Coordinate
-	): number[] {
-		const coordinate = this.indexToCoordinate(sourceIndex);
-		const neighbors = [];
-
-		// If we're not at the left edge of the row and destination is to the
-		// left of the source, add the neighbor to the left.
-		if (coordinate.x > 0 && destinationCoordinate.x < coordinate.x) {
-			neighbors.push(sourceIndex - 1);
-		}
-
-		// If we're not at the right edge of the row and destination is to the
-		// right of the source, add the neighbor to the right.
-		if (
-			coordinate.x < this.rowLength - 1 &&
-			destinationCoordinate.x > coordinate.x
-		) {
-			neighbors.push(sourceIndex + 1);
-		}
-
-		// Check if there is a row below the current row and if so, add it to
-		// the neighbors.
-		if (this.cells[sourceIndex + this.rowLength] !== undefined) {
-			neighbors.push(sourceIndex + this.rowLength);
-		}
-
-		return neighbors;
 	}
 
 	/**
