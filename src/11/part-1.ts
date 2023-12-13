@@ -5,7 +5,7 @@ import { Universe } from './universe.ts';
 /* ========================================================================== */
 
 async function findSolution(input: string): Promise<number> {
-	const universe = Universe.createUniverses(input);
+	const universe = Universe.createUniverse(input);
 
 	return universe.calculate();
 }

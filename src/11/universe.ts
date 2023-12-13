@@ -17,7 +17,7 @@ export class Universe {
 
 	/* ---------------------------------------------------------------------- */
 
-	static createUniverses(input: string): Universe {
+	static createUniverse(input: string): Universe {
 		const rows = input.split('\n');
 		const rowLength = rows[0].length;
 
