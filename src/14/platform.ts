@@ -3,6 +3,8 @@ type Coordinate = {
 	y: number;
 };
 
+type Direction = 'north' | 'east' | 'south' | 'west';
+
 /* ========================================================================== */
 
 const cubeRock = '#';
@@ -12,14 +14,10 @@ const roundedRock = 'O';
 /* ========================================================================== */
 
 export class Platform {
-	constructor(
-		private grid: string,
-		private columnCount: number
-	) {
-		this.rowCount = this.grid.length / this.columnCount;
-		this.addCubeRockEdge();
+	constructor(grid: string, columnCount: number) {
+		this.init(grid, columnCount);
 
-		this.cells = this.grid.split('');
+		this.cubeRocks = this.identifyCubeRocks();
 	}
 
 	/* ---------------------------------------------------------------------- */
@@ -33,35 +31,73 @@ export class Platform {
 
 	/* ---------------------------------------------------------------------- */
 
-	private cubes: number[] = [];
 	private cells: string[];
+	private columnCount: number;
+	private cubeRocks: Coordinate[];
 	private rowCount: number;
 
 	/* ---------------------------------------------------------------------- */
 
-	private addCubeRockEdge() {
-		const rockEdge = cubeRock.repeat(this.columnCount);
+	private identifyCubeRocks(): Coordinate[] {
+		return this.cells.reduce((cubeRocks, cell, index) => {
+			if (cell === cubeRock) {
+				cubeRocks.push(this.indexToCoordinate(index));
+			}
 
-		this.grid = `${rockEdge}${this.grid}`;
+			return cubeRocks;
+		}, []);
 	}
 
-	private distributeRoundedRocks() {
-		this.cubes.forEach((rockCount, cubeIndex) => {
-			for (let index = 1; index <= rockCount; index++) {
-				this.cells[cubeIndex + index * this.rowCount] = roundedRock;
+	private init(grid: string, columnCount: number) {
+		const { paddedGrid, paddedColumCount } = this.padGrid(grid, columnCount);
+
+		this.columnCount = paddedColumCount;
+		this.cells = paddedGrid.split('');
+		this.rowCount = this.cells.length / this.columnCount;
+	}
+
+	/* ---------------------------------------------------------------------- */
+
+	private padGrid(
+		grid: string,
+		columnCount: number
+	): { paddedGrid: string; paddedColumCount: number } {
+		const paddedColumCount = columnCount + 2;
+
+		const rows = this.getRows(grid.split(''), columnCount);
+		const paddedRow = rows.map(row => `${cubeRock}${row.join('')}${cubeRock}`);
+
+		const rockRow = cubeRock.repeat(paddedColumCount);
+		const paddedGrid = `${rockRow}${paddedRow.join('')}${rockRow}`;
+
+		return {
+			paddedGrid,
+			paddedColumCount
+		};
+	}
+
+	/* ---------------------------------------------------------------------- */
+
+	private distributeRocks(
+		countPerCube: Map<Coordinate, number>,
+		getIndex: (cubeRock: Coordinate, index: number) => number
+	) {
+		countPerCube.forEach((count, cubeRock) => {
+			for (let index = 0; index < count; index++) {
+				const cellIndex = getIndex(cubeRock, index);
+				this.cells[cellIndex] = roundedRock;
 			}
 		});
-
-		this.cubes = [];
 	}
 
 	/**
 	 * Returns an array of strings, each string represents a row in the grid.
 	 */
-	private getRows(grid: string[] = this.cells): string[] {
+	private getRows(cells: string[], columnCount): string[][] {
 		const rows = [];
-		for (let i = 0; i < grid.length; i += this.columnCount) {
-			rows.push(grid.slice(i, i + this.rowCount));
+
+		for (let i = 0; i < cells.length; i += columnCount) {
+			rows.push(cells.slice(i, i + columnCount));
 		}
 
 		return rows;
@@ -70,17 +106,18 @@ export class Platform {
 	/* ---------------------------------------------------------------------- */
 
 	public calculateLoad(): number {
-		return this.cells.reduce((total, cell, index) => {
-			if (cell !== roundedRock) {
+		return this.cells.reduce((total, rock, index) => {
+			if (rock !== roundedRock) {
 				return total;
 			}
 
-			const load = this.rowCount - Math.floor(index / this.columnCount) + 1;
+			const rockCoordinate = this.indexToCoordinate(index);
+
+			const load = this.rowCount - 1 - rockCoordinate.y;
 
 			return total + load;
 		}, 0);
 	}
-
 	/**
 	 * Converts an index to a X,Y coordinate. The index 0 corresponds to the
 	 * coordinate { x: 0, y: 0 }.
@@ -95,48 +132,53 @@ export class Platform {
 		};
 	}
 
+	public coordinateToIndex(coordinate: Coordinate): number {
+		const row = coordinate.y * this.columnCount;
+
+		return row + coordinate.x;
+	}
+
 	public log() {
-		console.log('Cells: ', this.grid);
-		console.log('Columns: ', this.columnCount);
-		console.log('Rows: ', this.rowCount);
-		const rows = this.getRows();
+		const rows = this.getRows(this.cells, this.columnCount);
 		console.table(rows);
 	}
 
-	private findLastIndex<T = unknown>(
-		source: T[],
-		predicate: (item: T, index: number) => boolean
-	): number {
-		for (let index = source.length - 1; index >= 0; index--) {
-			if (predicate(source[index], index)) {
-				return index;
-			}
-		}
-
-		return -1;
-	}
-
 	public moveRocksNorth() {
-		console.log('Moving rocks!');
+		const rocksPerCube: Map<Coordinate, number> = new Map();
+
 		this.cells.forEach((cell, index) => {
 			if (cell !== roundedRock) {
 				return;
 			}
 
-			const coordinate = this.indexToCoordinate(index);
+			const cellCoordinate = this.indexToCoordinate(index);
+			const destination = this.cubeRocks.findLast(cubeRock => {
+				// Exclude the last row and excludes cube rocks in a
+				// different column.
+				if (cubeRock.y === this.rowCount - 1 || cubeRock.x !== cellCoordinate.x) {
+					return false;
+				}
 
-			const cubeIndex = this.findLastIndex<string>(
-				this.cells,
-				(cell, cellIndex) =>
-					cell === cubeRock &&
-					cellIndex < index &&
-					cellIndex % this.columnCount === coordinate.x
-			);
+				return cubeRock.y < cellCoordinate.y;
+			});
 
-			this.cubes[cubeIndex] = (this.cubes[cubeIndex] ?? 0) + 1;
+			if (destination === undefined) {
+				console.log('No destination found for: ', cellCoordinate);
+
+				return;
+			}
+
+			rocksPerCube.set(destination, (rocksPerCube.get(destination) ?? 0) + 1);
 			this.cells[index] = emptySpace;
 		});
 
-		this.distributeRoundedRocks();
+		this.distributeRocks(rocksPerCube, (cubeRock: Coordinate, index: number) => {
+			const destination = { ...cubeRock };
+			destination.y = destination.y + 1 + index;
+
+			return this.coordinateToIndex(destination);
+		});
 	}
+
+	public moveRocksWest() {}
 }
