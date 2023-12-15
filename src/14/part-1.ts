@@ -8,7 +8,7 @@ import { Platform } from './platform.js';
 async function findSolution(input: string): Promise<number> {
 	const platform = Platform.createPlatform(input);
 
-	platform.moveRocks();
+	platform.moveRocksNorth();
 
 	return platform.calculateLoad();
 }
