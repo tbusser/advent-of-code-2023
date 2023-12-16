@@ -3,8 +3,6 @@ type Coordinate = {
 	y: number;
 };
 
-type Direction = 'north' | 'east' | 'south' | 'west';
-
 /* ========================================================================== */
 
 const cubeRock = '#';
@@ -180,5 +178,152 @@ export class Platform {
 		});
 	}
 
-	public moveRocksWest() {}
+	public moveRocksEast() {
+		const rocksPerCube: Map<Coordinate, number> = new Map();
+
+		this.cells.forEach((cell, index) => {
+			if (cell !== roundedRock) {
+				return;
+			}
+
+			const cellCoordinate = this.indexToCoordinate(index);
+			const destination = this.cubeRocks.find(cubeRock => {
+				// Exclude the last row and excludes cube rocks in a
+				// different column.
+				if (cubeRock.x === 0 || cubeRock.y !== cellCoordinate.y) {
+					return false;
+				}
+
+				return cubeRock.x > cellCoordinate.x;
+			});
+
+			if (destination === undefined) {
+				console.log('No destination found for: ', cellCoordinate);
+
+				return;
+			}
+
+			rocksPerCube.set(destination, (rocksPerCube.get(destination) ?? 0) + 1);
+			this.cells[index] = emptySpace;
+		});
+
+		this.distributeRocks(rocksPerCube, (cubeRock: Coordinate, index: number) => {
+			const destination = { ...cubeRock };
+			destination.x = destination.x - 1 - index;
+
+			return this.coordinateToIndex(destination);
+		});
+	}
+
+	public moveRocksSouth() {
+		const rocksPerCube: Map<Coordinate, number> = new Map();
+
+		this.cells.forEach((cell, index) => {
+			if (cell !== roundedRock) {
+				return;
+			}
+
+			const cellCoordinate = this.indexToCoordinate(index);
+			const destination = this.cubeRocks.find(cubeRock => {
+				// Exclude the last row and excludes cube rocks in a
+				// different column.
+				if (cubeRock.y === 0 || cubeRock.x !== cellCoordinate.x) {
+					return false;
+				}
+
+				return cubeRock.y > cellCoordinate.y;
+			});
+
+			if (destination === undefined) {
+				console.log('No destination found for: ', cellCoordinate);
+
+				return;
+			}
+
+			rocksPerCube.set(destination, (rocksPerCube.get(destination) ?? 0) + 1);
+			this.cells[index] = emptySpace;
+		});
+
+		this.distributeRocks(rocksPerCube, (cubeRock: Coordinate, index: number) => {
+			const destination = { ...cubeRock };
+			destination.y = destination.y - 1 - index;
+
+			return this.coordinateToIndex(destination);
+		});
+	}
+
+	public moveRocksWest() {
+		const rocksPerCube: Map<Coordinate, number> = new Map();
+
+		this.cells.forEach((cell, index) => {
+			if (cell !== roundedRock) {
+				return;
+			}
+
+			const cellCoordinate = this.indexToCoordinate(index);
+			const destination = this.cubeRocks.findLast(cubeRock => {
+				// Exclude the last row and excludes cube rocks in a
+				// different column.
+				if (
+					cubeRock.x === this.columnCount - 1 ||
+					cubeRock.y !== cellCoordinate.y
+				) {
+					return false;
+				}
+
+				return cubeRock.x < cellCoordinate.x;
+			});
+
+			if (destination === undefined) {
+				console.log('No destination found for: ', cellCoordinate);
+
+				return;
+			}
+
+			rocksPerCube.set(destination, (rocksPerCube.get(destination) ?? 0) + 1);
+			this.cells[index] = emptySpace;
+		});
+
+		this.distributeRocks(rocksPerCube, (cubeRock: Coordinate, index: number) => {
+			const destination = { ...cubeRock };
+			destination.x = destination.x + 1 + index;
+
+			return this.coordinateToIndex(destination);
+		});
+	}
+
+	public cycle(spins: number) {
+		const hashes: Record<string, number> = {};
+		const loads: number[] = [];
+		let cycleCount = 0;
+		let hashClashIndex = undefined;
+
+		while (hashClashIndex === undefined) {
+			// Start by upping the cycle count.
+			cycleCount++;
+
+			// Tilt the platform in all directions.
+			this.moveRocksNorth();
+			this.moveRocksWest();
+			this.moveRocksSouth();
+			this.moveRocksEast();
+
+			// Greate a string of the current grid state.
+			const hash = this.cells.join('');
+			// Check if the hash has been seen before.
+			hashClashIndex = hashes[hash];
+
+			// When the hash hasn't been seen before, store it.
+			if (hashClashIndex === undefined) {
+				hashes[hash] = cycleCount;
+				loads[cycleCount] = this.calculateLoad();
+			}
+		}
+
+		// Calculate the index of the load that will be returned.
+		const loadIndex =
+			((spins - hashClashIndex) % (cycleCount - hashClashIndex)) + hashClashIndex;
+
+		return loads[loadIndex];
+	}
 }
