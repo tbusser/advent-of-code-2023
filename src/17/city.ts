@@ -36,14 +36,32 @@ export class City extends Grid<number> {
 	/* ---------------------------------------------------------------------- */
 
 	/**
-	 * Creates a key for a position.
+	 * Creates a key for a position. The key needs to include the following
+	 * information:
+	 * - index
+	 *   The position of the cell, this is the most basis.
+	 * - direction
+	 *   The direction from which the cell was reached. This is needed to allow
+	 *   the same cell to be visited from both the horizontal and
+	 *   vertical direction;
+	 * - steps
+	 *   The number of consecutive steps in the same direction. This is needed
+	 *   to allow the same cell to be visited with a different number of
+	 *   consecutive steps.
+	 *
+	 * Omitting any of these parts from the key will result in the same cell
+	 * being excluded from alternative paths which may not be shortest path but
+	 * are still valid given the constraints of consecutive steps.
 	 */
 	private positionToKey(
 		index: number,
-		direction: Direction,
+		direction: Direction | undefined,
 		steps: number
 	): string {
-		return `${index}-${direction}-${steps.toString()}`;
+		const generalDirection =
+			direction === 'down' || direction === 'up' ? 'vertical' : 'horizontal';
+
+		return `${index}-${generalDirection}-${steps.toString()}`;
 	}
 
 	private hasVisitedPosition(
@@ -80,7 +98,7 @@ export class City extends Grid<number> {
 
 		while (priorityQueue.length) {
 			// Get the item with the top priority.
-			const position = priorityQueue.pop();
+			const position = priorityQueue.pop() as Position;
 
 			// When it is a position that has been visited before, skip it.
 			if (this.hasVisitedPosition(position, visited)) {
