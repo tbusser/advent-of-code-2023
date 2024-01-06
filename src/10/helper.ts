@@ -154,6 +154,12 @@ class Grid {
 		return result;
 	}
 
+	/**
+	 * This will not fully flood fill the grid. It is only intended to flood
+	 * fill the cells that are outside of the main loop and only those that are
+	 * not placed between walls of the main loop. After the flood fill there
+	 * will still be ground cells outside of the main loop.
+	 */
 	private floodFillGroundCells() {
 		// Because the grid has been padded we know for the cell at index 0
 		// is a ground cell. This can be used as the starting point for the
