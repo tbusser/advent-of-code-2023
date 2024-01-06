@@ -28,6 +28,7 @@ function isGear(character: string): boolean {
 
 function isDigit(grid: string[][], row: number, column: number): boolean {
 	const cell = grid[row][column];
+
 	return !isNaN(Number(cell));
 }
 
@@ -35,9 +36,13 @@ function isValidGear(parts: number[]): boolean {
 	return parts.length === 2;
 }
 
-function getPartsForGear(grid: string[][], row: number, column: number): number[] {
+function getPartsForGear(
+	grid: string[][],
+	row: number,
+	column: number
+): number[] {
 	const parts = [];
-	const canGoUp = grid[row - 1] !== undefined
+	const canGoUp = grid[row - 1] !== undefined;
 	const canGoDown = grid[row + 1] !== undefined;
 	const canGoLeft = grid[row][column - 1] !== undefined;
 	const canGoRight = grid[row][column + 1] !== undefined;
@@ -48,12 +53,11 @@ function getPartsForGear(grid: string[][], row: number, column: number): number[
 		// will be part of the same number as the field directly above.
 		if (isDigit(grid, row - 1, column)) {
 			parts.push(getNumberAt(grid, row - 1, column));
-		}
-		else {
-			if (isDigit(grid, row - 1, column - 1)){
+		} else {
+			if (isDigit(grid, row - 1, column - 1)) {
 				parts.push(getNumberAt(grid, row - 1, column - 1));
 			}
-			if (isDigit(grid, row - 1, column + 1)){
+			if (isDigit(grid, row - 1, column + 1)) {
 				parts.push(getNumberAt(grid, row - 1, column + 1));
 			}
 		}
@@ -65,12 +69,11 @@ function getPartsForGear(grid: string[][], row: number, column: number): number[
 		// will be part of the same number as the field directly below.
 		if (isDigit(grid, row + 1, column)) {
 			parts.push(getNumberAt(grid, row + 1, column));
-		}
-		else {
-			if (isDigit(grid, row + 1, column - 1)){
+		} else {
+			if (isDigit(grid, row + 1, column - 1)) {
 				parts.push(getNumberAt(grid, row + 1, column - 1));
 			}
-			if (isDigit(grid, row + 1, column + 1)){
+			if (isDigit(grid, row + 1, column + 1)) {
 				parts.push(getNumberAt(grid, row + 1, column + 1));
 			}
 		}
@@ -88,7 +91,7 @@ function getPartsForGear(grid: string[][], row: number, column: number): number[
 }
 
 function getGearRatiosForRow(grid: string[][], row: number): number[] {
-	const ratios = []
+	const ratios = [];
 	grid[row].forEach((cell, column) => {
 		if (isGear(cell)) {
 			const gearParts = getPartsForGear(grid, row, column);
@@ -103,7 +106,7 @@ function getGearRatiosForRow(grid: string[][], row: number): number[] {
 
 async function findSolution(input: string): Promise<number> {
 	const lines = input.split('\n');
-	const grid = lines.map((line) => line.split(''));
+	const grid = lines.map(line => line.split(''));
 
 	let gearRatios: number[] = [];
 	for (let row = 0; row < grid.length; row++) {
