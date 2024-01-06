@@ -8,7 +8,7 @@ import { City } from './city.ts';
 async function findSolution(input: string): Promise<number> {
 	const city = City.createCity(input);
 
-	return city.findBestPath();
+	return city.findBestPath(4, 10);
 }
 
 /* ========================================================================== */

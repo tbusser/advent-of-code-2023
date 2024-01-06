@@ -27,7 +27,7 @@ export class City extends Grid<number> {
 
 		const grid: number[] = rows.reduce(
 			(grid, row) => [...grid, ...row.split('').map(Number)],
-			[]
+			[] as number[]
 		);
 
 		return new City(grid, columns);
@@ -86,11 +86,11 @@ export class City extends Grid<number> {
 	}
 
 	// eslint-disable-next-line complexity
-	public findBestPath() {
+	public findBestPath(minMoves = 0, maxMoves = 3) {
 		const endPosition = this.grid.length - 1;
 		const priorityQueue = new Heap<Position>((a, b) => a.heatLoss - b.heatLoss);
 		priorityQueue.push({
-			consecutive: 0,
+			consecutive: 1,
 			heatLoss: 0,
 			index: 0
 		});
@@ -105,8 +105,9 @@ export class City extends Grid<number> {
 				continue;
 			}
 
-			// End position found, return the cost it took to get there.
-			if (position.index === endPosition) {
+			// End position found but only if it satisfies the minimum number
+			// of consecutive moves, return the cost it took to get there.
+			if (position.index === endPosition && position.consecutive >= minMoves) {
 				return position.heatLoss;
 			}
 
@@ -137,7 +138,10 @@ export class City extends Grid<number> {
 					this.hasVisitedPosition(neighborPosition, visited, false) ||
 					// If the neighbor exceeds the number of consecutive steps
 					// in the same direction, skip it.
-					(position.direction === direction && position.consecutive === 3)
+					(sameDirection && position.consecutive >= maxMoves) ||
+					// If the neighbor does not satisfy the minimum number of
+					// consecutive steps, skip it.
+					(!sameDirection && position.consecutive < minMoves)
 				) {
 					continue;
 				}
