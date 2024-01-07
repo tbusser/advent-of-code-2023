@@ -2,6 +2,14 @@ import { Direction, Grid } from '../utils/Grid.ts';
 
 /* ========================================================================== */
 
+enum Items {
+	EmptySpace = '.',
+	SlantedMirror = '/',
+	BackSlantedMirror = '\\',
+	HorizontalSplitter = '-',
+	VerticalSplitter = '|'
+}
+
 type Position = {
 	direction: Direction;
 	index: number;
@@ -82,27 +90,40 @@ export class Contraption extends Grid<string> {
 	}
 
 	// eslint-disable-next-line complexity
-	private getDirection(currentDirection: Direction, item: string): Direction[] {
-		if (item === '/') {
-			return [slantedMirror[currentDirection]];
-		}
-		if (item === '\\') {
-			return [backSlantedMirror[currentDirection]];
-		}
-		if (item === '-') {
-			return currentDirection === 'left' || currentDirection === 'right'
-				? [currentDirection]
-				: ['left', 'right'];
-		}
+	private getNextDirections(
+		currentDirection: Direction,
+		item: Items
+	): Direction[] {
+		switch (item) {
+			case Items.EmptySpace:
+				return [currentDirection];
 
-		return currentDirection === 'up' || currentDirection === 'down'
-			? [currentDirection]
-			: ['up', 'down'];
+			case Items.SlantedMirror:
+				return [slantedMirror[currentDirection]];
+
+			case Items.BackSlantedMirror:
+				return [backSlantedMirror[currentDirection]];
+
+			case Items.HorizontalSplitter:
+				return currentDirection === 'left' || currentDirection === 'right'
+					? [currentDirection]
+					: ['left', 'right'];
+
+			case Items.VerticalSplitter:
+				return currentDirection === 'up' || currentDirection === 'down'
+					? [currentDirection]
+					: ['up', 'down'];
+		}
 	}
 
 	// eslint-disable-next-line complexity
 	public findBestPath() {
-		const queue: Position[] = [{ index: 0, direction: 'right' }];
+		const queue: Position[] = [
+			{
+				index: 0,
+				direction: 'right'
+			}
+		];
 		const visited = new Set<string>();
 		const energized = new Set<number>();
 
@@ -120,28 +141,28 @@ export class Contraption extends Grid<string> {
 			// Get the neighbors of the current position and iterate over all
 			// of them.
 			const neighbors = this.getNeighbors(position.index);
-			if (this.grid[position.index] === '.') {
-				const neighbor = neighbors[position.direction];
-				if (neighbor !== undefined) {
+			const directions = this.getNextDirections(
+				position.direction,
+				this.grid[position.index] as Items
+			);
+			for (const direction of directions) {
+				const neighbor = neighbors[direction];
+				if (
+					neighbor === undefined ||
+					visited.has(this.positionToKey(neighbor.index, direction))
+				) {
+					continue;
+				} else if (direction === position.direction) {
+					queue.push({
+						...position,
+						index: neighbor.index
+					});
+				} else {
 					queue.push({
 						index: neighbor.index,
-						direction: position.direction
+						direction
 					});
 				}
-			} else {
-				const directions = this.getDirection(
-					position.direction,
-					this.grid[position.index]
-				);
-				directions.forEach(direction => {
-					const neighbor = neighbors[direction];
-					if (neighbor !== undefined) {
-						queue.push({
-							index: neighbor.index,
-							direction
-						});
-					}
-				});
 			}
 		}
 
