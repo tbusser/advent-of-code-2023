@@ -30,6 +30,35 @@ const backSlantedMirror: Record<Direction, Direction> = {
 
 /* ========================================================================== */
 
+// eslint-disable-next-line complexity
+function getNextDirections(
+	currentDirection: Direction,
+	item: Items
+): Direction[] {
+	switch (item) {
+		case Items.EmptySpace:
+			return [currentDirection];
+
+		case Items.SlantedMirror:
+			return [slantedMirror[currentDirection]];
+
+		case Items.BackSlantedMirror:
+			return [backSlantedMirror[currentDirection]];
+
+		case Items.HorizontalSplitter:
+			return currentDirection === 'left' || currentDirection === 'right'
+				? [currentDirection]
+				: ['left', 'right'];
+
+		case Items.VerticalSplitter:
+			return currentDirection === 'up' || currentDirection === 'down'
+				? [currentDirection]
+				: ['up', 'down'];
+	}
+}
+
+/* ========================================================================== */
+
 export class Contraption extends Grid<string> {
 	constructor(grid: string[], columns: number) {
 		super(grid, columns);
@@ -65,63 +94,32 @@ export class Contraption extends Grid<string> {
 	 * being excluded from alternative paths which may not be shortest path but
 	 * are still valid given the constraints of consecutive steps.
 	 */
-	private positionToKey(
-		index: number,
-		direction: Direction | undefined
-	): string {
+	private positionToKey(index: number, direction?: Direction): string {
 		return `${index}-${direction}`;
 	}
 
-	private hasVisitedPosition(
-		position: Position,
-		visited: Set<string>,
-		mark = true
-	): boolean {
+	private hasVisitedPosition(position: Position, visited: Set<string>): boolean {
 		const key = this.positionToKey(position.index, position.direction);
 		// Check if the position has been visited before.
 		const result = visited.has(key);
 		// Add the key to the visited set, if it is already in there nothing
 		// will happen.
-		if (mark) {
-			visited.add(key);
-		}
+		visited.add(key);
 
 		return result;
 	}
 
-	// eslint-disable-next-line complexity
-	private getNextDirections(
-		currentDirection: Direction,
-		item: Items
-	): Direction[] {
-		switch (item) {
-			case Items.EmptySpace:
-				return [currentDirection];
-
-			case Items.SlantedMirror:
-				return [slantedMirror[currentDirection]];
-
-			case Items.BackSlantedMirror:
-				return [backSlantedMirror[currentDirection]];
-
-			case Items.HorizontalSplitter:
-				return currentDirection === 'left' || currentDirection === 'right'
-					? [currentDirection]
-					: ['left', 'right'];
-
-			case Items.VerticalSplitter:
-				return currentDirection === 'up' || currentDirection === 'down'
-					? [currentDirection]
-					: ['up', 'down'];
-		}
-	}
+	/* ---------------------------------------------------------------------- */
 
 	// eslint-disable-next-line complexity
-	public findBestPath() {
+	public findBestPath(
+		startIndex: number = 0,
+		startDirection: Direction = 'right'
+	) {
 		const queue: Position[] = [
 			{
-				index: 0,
-				direction: 'right'
+				index: startIndex,
+				direction: startDirection
 			}
 		];
 		const visited = new Set<string>();
@@ -141,10 +139,11 @@ export class Contraption extends Grid<string> {
 			// Get the neighbors of the current position and iterate over all
 			// of them.
 			const neighbors = this.getNeighbors(position.index);
-			const directions = this.getNextDirections(
+			const directions = getNextDirections(
 				position.direction,
 				this.grid[position.index] as Items
 			);
+
 			for (const direction of directions) {
 				const neighbor = neighbors[direction];
 				if (
