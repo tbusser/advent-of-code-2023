@@ -93,6 +93,16 @@ export class Grid<T = string> {
 
 	/* ---------------------------------------------------------------------- */
 
+	public get columnCount(): number {
+		return this.columns;
+	}
+
+	public get rowCount(): number {
+		return this.grid.length / this.columns;
+	}
+
+	/* ---------------------------------------------------------------------- */
+
 	protected getNeighbors(index: number): CellNeighbors<T> {
 		const coordinate = this.indexToCoordinate(index);
 		const neighbors: Neighbors<T> = {};
