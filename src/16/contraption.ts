@@ -147,19 +147,12 @@ export class Contraption extends Grid<string> {
 			for (const direction of directions) {
 				const neighbor = neighbors[direction];
 				if (
-					neighbor === undefined ||
-					visited.has(this.positionToKey(neighbor.index, direction))
+					neighbor !== undefined &&
+					!visited.has(this.positionToKey(neighbor.index, direction))
 				) {
-					continue;
-				} else if (direction === position.direction) {
 					queue.push({
-						...position,
+						direction,
 						index: neighbor.index
-					});
-				} else {
-					queue.push({
-						index: neighbor.index,
-						direction
 					});
 				}
 			}
