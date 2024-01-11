@@ -1,4 +1,5 @@
 import { fetchInputForDay } from '../utils/fetch-input.js';
+import { calculateLeastCommonMultiple } from '../utils/least-common-multiple.ts';
 import { measure } from '../utils/performance.js';
 
 /* ========================================================================== */
@@ -122,49 +123,7 @@ async function findSolution(input: string): Promise<number> {
 	// node. With these intervals we need to find the least common multiple for
 	// these numbers.
 	// See: https://www.cuemath.com/numbers/lcm-least-common-multiple/
-
-	// 1: Calculate for each ghost's interval what its prime factors are.
-	const primeFactorsPerGhost = ghosts.map(ghost => getPrimeFactors(ghost.steps));
-
-	// 2: For each ghost we have to group its prime factors so we know how many
-	//    times a prime number occurs in the prime factors for that ghost. The
-	//    result is an object where the key is the prime number and the value is
-	//    is how many times that prime number occurs in the prime factors. The
-	//    will be used as the power of that prime number.
-	const groupedPrimeNumbersPerGhost = primeFactorsPerGhost.map(groupNumbers);
-
-	// 3: We need to merge the prime numbers of all ghosts into a single object
-	//    where each prime number exists only once and the power of that prime
-	//    number is the highest power of that prime number of all ghosts.
-	//    E.g.: Ghost 1 has 2 twice in its prime factors and ghost 2 has 2 once
-	//          in its prime factors, we only keep the 2 with 2 as its power.
-	const highestPowerPrimeNumbers = groupedPrimeNumbersPerGhost.reduce(
-		(result, primeNumbers) => {
-			// Iterate over all the prime numbers for this ghost.
-			Object.keys(primeNumbers).forEach(number => {
-				const power = primeNumbers[number];
-				// Only save its power when it is more than the current power.
-				result[number] = Math.max(result[number] ?? 0, power);
-			});
-
-			return result;
-		},
-		{}
-	);
-
-	// 4: Now that we have determined the highest power of each prime number we
-	//    can calculate the least common multiple. For this we have to take each
-	//    prime number to its highest power and multiply them all together.
-	const leastCommonMultiple = Object.keys(highestPowerPrimeNumbers).reduce(
-		(result, number) => {
-			const power = highestPowerPrimeNumbers[number];
-
-			return result * Math.pow(Number(number), power);
-		},
-		1
-	);
-
-	return leastCommonMultiple;
+	return calculateLeastCommonMultiple(ghosts.map(ghost => ghost.steps));
 }
 
 /* ========================================================================== */
