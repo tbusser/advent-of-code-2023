@@ -1,3 +1,5 @@
+export type Modules = Record<string, Module>;
+
 export type PulseType = 'high' | 'low';
 
 export type Pulse = {
@@ -63,13 +65,17 @@ export class Conjunction extends Module {
 
 	/* ---------------------------------------------------------------------- */
 
+	private _pulseToSend: PulseType = 'high';
+	public get lastPulseType(): PulseType {
+		return this._pulseToSend;
+	}
 	private inputs: Map<string, PulseType> = new Map();
 
 	/* ---------------------------------------------------------------------- */
 
 	public processPulse(pulse: PulseType, input: string): Pulse {
 		this.inputs.set(input, pulse);
-		const pulseToSend: PulseType = Array.from(this.inputs.values()).some(
+		this._pulseToSend = Array.from(this.inputs.values()).some(
 			pulse => pulse === 'low'
 		)
 			? 'high'
@@ -77,7 +83,7 @@ export class Conjunction extends Module {
 
 		return {
 			destinations: this.destinations,
-			type: pulseToSend,
+			type: this._pulseToSend,
 			source: this.name
 		};
 	}
@@ -117,3 +123,48 @@ export class FlipFlop extends Module {
 		};
 	}
 }
+
+/* ========================================================================== */
+
+function createModule(config: string): Module {
+	const [name, destination] = config.split(' -> ');
+	const destinations = destination.split(', ');
+	const cleanName = name.substring(1);
+
+	if (name.startsWith('%')) {
+		return new FlipFlop(destinations, cleanName);
+	} else if (name.startsWith('&')) {
+		return new Conjunction(destinations, cleanName);
+	}
+
+	return new BroadCaster(destinations);
+}
+
+function createModules(input: string): Modules {
+	const result: Modules = {};
+	const lines = input.split('\n');
+
+	// Create a module for each line from the input and store it in the
+	// result object.
+	lines.forEach(line => {
+		const module = createModule(line);
+		result[module.name] = module;
+	});
+
+	// Iterate over all the modules. For each module check if one of its
+	// destinations is a conjunction module. For each conjunction destination
+	// register the module as an input.
+	Object.values(result).forEach(module => {
+		for (const destination of module.destinations) {
+			if (result[destination] instanceof Conjunction) {
+				(result[destination] as Conjunction).registerInput(module.name);
+			}
+		}
+	});
+
+	return result;
+}
+
+/* ========================================================================== */
+
+export { createModules };
